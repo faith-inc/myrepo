@@ -1,24 +1,31 @@
 jest.setTimeout(60000);
-const object = require("../login-config.js");
+const {autologinLink} = require("../login-config.js");
 const assert = require("chai").assert;
 const should = require("should");
-var post = [];
+let post = [];
+const REQUEST_URL = "t.insigit.com/4a54e80cce5f98dab17e9e4b935f6825/725d96c4807507eb4bc7635e22a0c096";
+const {expectedValuesSearch} = require("../expect-placements-fixtures.js");
 
-const expectedValues = require("../expect-placements-config.js");
+function convertArrtoObj(array, key){
+  const initialValue = {};
+      return array.reduce((obj, item) => {
+      return {
+        ...obj,
+        [item[key]]: item,
+          };
+        }, initialValue);
+}
 
-const expectedValuesSearch = expectedValues["expectedValuesSearch"];
 
 describe("cam tracking", () => {
 
   it("/search", async () => {
-   var isOk = true;
-   var placement = [];
    page.setRequestInterception(true);
    page.on('request', function (request){
-    if (request.url().includes("t.insigit.com/4a54e80cce5f98dab17e9e4b935f6825/725d96c4807507eb4bc7635e22a0c096")&& request.method()=="POST") {
-        //post = request.postData();
+    if (request.url().includes(REQUEST_URL)&& request.method()=="POST") {
         post.push(JSON.parse(request.postData()));
        console.log("postData: ", JSON.parse(request.postData()) );
+       request.continue();
           }
     else {
        request.continue();
@@ -26,28 +33,18 @@ describe("cam tracking", () => {
       
     });
 
-    await page.goto(object["autologin"]);
+    await page.goto(autologinLink);
     await page.waitFor(6000);
    
     console.log("POST array:", post);
-    var filteredArr = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => ({placementId, actionId, promo, promocode, count}));
-
-     console.log("filteredArr", filteredArr);
+    let mappedPostArr = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => ({placementId, actionId, promo, promocode, count}));
+    let filteredPostArr = mappedPostArr.filter(({placementId})=> placementId !== 19 && placementId !==16);
+     console.log("mappedPostArr", mappedPostArr);
+     console.log("filteredPostArr", filteredPostArr);
      console.log("obj to arr of keys: ",  Object.keys(expectedValuesSearch));
-     console.log("filteredArr.length: ", filteredArr.length); 
+     console.log("convertArrtoObj", convertArrtoObj(filteredPostArr, "placementId"));
 
-     const convertArrtoObj = (array, key) =>{
-      const initialValue = {};
-      return array.reduce((obj, item) => {
-      return {
-        ...obj,
-        [item[key]]: item,
-          };
-        }, initialValue);
-      }
-    console.log("convertArrtoObj", convertArrtoObj(filteredArr, "placementId"));
-
-    assert.deepEqual(convertArrtoObj(filteredArr, "placementId"), expectedValuesSearch, "Test on  /search failed" );
+    assert.deepEqual(convertArrtoObj(filteredPostArr, "placementId"), expectedValuesSearch, "Test on  /search failed" );
 
        });
 
