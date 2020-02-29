@@ -9,6 +9,7 @@ const {expectedValuesSearch1} = require("../expect-placements-fixtures.js");
 const {expectedValuesSearch2} = require("../expect-placements-fixtures.js");
 const {selectorsOnSearch} = require("../placement-selectors.js");
 
+
 function convertArrtoObj(array, key1,  key2){
   const initialValue = {};
       return array.reduce((obj, item) => {
@@ -40,11 +41,26 @@ async function clickOnCamPlacement(selector){
    await page.click(selector);
     await page.waitFor(3000); // такая функция не срабатывает, ошибка Cannot read property 'url' of undefined
     const pages = await browser.pages();
-    console.log("pages - ", pages[1].url);
+   console.log("pages - ", pages[1].url);
+    await page.bringToFront();
+    if (!page.url().includes("/search") ) await page.goBack(); 
+
       return pages;
 
 }
 
+function getSumOfCount(filterarr, id){
+  let countforid = 0;
+   let filtSearch1_id= post.flat().filter(({placementId})=> placementId === id).map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
+      ({count}));
+    for (let i = 0; i < filtSearch1_id.length; i++ ) {
+        countforid = countforid + filtSearch1_id[i]["count"];
+          }
+    console.log("countforid", countforid);
+    let convertedSearch1 = convertArrtoObj(filterarr, "placementId", "actionId");
+    convertedSearch1[id+"_1"]["count"] = countforid;
+    return convertedSearch1;
+}
 
 
 describe("cam tracking", () => {
@@ -61,30 +77,60 @@ describe("cam tracking", () => {
     let filteredPostArrSearch1 = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
       ({placementId, actionId, promo, promocode, count})).filter(({placementId})=> placementId !== 19 && placementId !==16);
 
+   
+// might be a separate function to get total count for an according placement
+   /* let filtSearch1_27 = post.flat().filter(({placementId})=> placementId === 27).map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
+      ({count}));
+
+
+    for (let i = 0; i < filtSearch1_27.length; i++ ) {
+        countfor27 = countfor27 + filtSearch1_27[i]["count"];
+          }
+    console.log("countfor27", countfor27); */
+
+
     //let filteredPostArr = mappedPostArr.filter(({placementId})=> placementId !== 19 && placementId !==16);
      //console.log("mappedPostArr", mappedPostArr);
      console.log("filteredPostArrSearch1", filteredPostArrSearch1);
+     console.log("filteredPostArrSearch1 element2", filteredPostArrSearch1[2]);
+
      console.log("obj to arr of keys: ",  Object.keys(expectedValuesSearch1));
      console.log("convertArrtoObj", convertArrtoObj(filteredPostArrSearch1, "placementId", "actionId"));
 
-    assert.deepEqual(convertArrtoObj(filteredPostArrSearch1, "placementId", "actionId"), expectedValuesSearch1, "Test on  /search impressions failed" );
+   //  let convertedSearch1 = convertArrtoObj(filteredPostArrSearch1, "placementId", "actionId");
+     
+//convertedSearch1["27_1"]["count"] = countfor27;
+   let convertedSearch1 = getSumOfCount(filteredPostArrSearch1, 27);
+   convertedSearch1 = getSumOfCount(filteredPostArrSearch1, 3);
+   console.log("convertedSearch1", convertedSearch1);
+   // console.log("convertedSearch1[27_1]count ", convertedSearch1["27_1"]["count"]);
+
+
+   // assert.deepEqual(convertArrtoObj(filteredPostArrSearch1, "placementId", "actionId"), expectedValuesSearch1, "Test on  /search impressions failed" );
+     assert.deepEqual(convertedSearch1, expectedValuesSearch1, "Test on  /search impressions failed" );
 
        });
 
-  it("clicks", async () => {
+ it("clicks", async () => {
    // selectorsOnSearch.forEach(element => clickOnCamPlacement(element)); 
    let keyOfSelectors = Object.keys(selectorsOnSearch);
    console.log ("keyOfSelectors", keyOfSelectors[1]);
    console.log ("selectorsOnSearch", selectorsOnSearch[1]);
 
-//keyOfSelectors.forEach(element => clickOnCamPlacement(selectorsOnSearch[element]));
-clickOnCamPlacement(selectorsOnSearch[1]);
-clickOnCamPlacement(selectorsOnSearch[27]);
-await page.bringToFront();
-clickOnCamPlacement(selectorsOnSearch[3]);
-clickOnCamPlacement(selectorsOnSearch[18]);
+//keyOfSelectors.forEach(element => await clickOnCamPlacement(selectorsOnSearch[element])); //ошибка при вызове асинхронной функции
 
-await page.waitFor(3000);
+for (let keyOfSelector of keyOfSelectors) {
+  await clickOnCamPlacement(selectorsOnSearch[keyOfSelector]);
+  console.log ("keyOfSelector", selectorsOnSearch[keyOfSelector]);
+}
+/*
+await clickOnCamPlacement(selectorsOnSearch[3]);
+await clickOnCamPlacement(selectorsOnSearch[27]);
+await page.bringToFront();
+await clickOnCamPlacement(selectorsOnSearch[1]);
+await clickOnCamPlacement(selectorsOnSearch[18]);  */
+
+//await page.waitFor(3000);
 
 
   //clickOnCamPlacement(selectorsOnSearch[1]);
@@ -136,7 +182,7 @@ await page.waitFor(3000);
      assert.deepEqual(convertArrtoObj(filteredPostArrSearch2, "placementId", "actionId"), expectedValuesSearch2, "Test on  /search clicks failed" );
 
 
-  })
+  })  
 
    
     });
