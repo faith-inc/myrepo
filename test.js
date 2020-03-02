@@ -8,6 +8,8 @@ const REQUEST_URL = "t.insigit.com/4a54e80cce5f98dab17e9e4b935f6825/725d96c48075
 const {expectedValuesSearch1} = require("../expect-placements-fixtures.js");
 const {expectedValuesSearch2} = require("../expect-placements-fixtures.js");
 const {selectorsOnSearch} = require("../placement-selectors.js");
+let url_flag = false;
+
 
 
 function convertArrtoObj(array, key1,  key2){
@@ -36,31 +38,27 @@ function subscribeToPost(){
     });
 }
 
-async function clickOnCamPlacement(selector){
-  await page.waitFor(selector);
-   await page.click(selector);
-    await page.waitFor(3000); // такая функция не срабатывает, ошибка Cannot read property 'url' of undefined
-    const pages = await browser.pages();
-   console.log("pages - ", pages[1].url);
-    await page.bringToFront();
-    if (!page.url().includes("/search") ) await page.goBack(); 
+  async function clickOnCamPlacement(selector, idOfCamPlacement){
+    await page.waitFor(selector);
+    await page.click(selector);
+    await page.waitFor(3000); 
+    console.log("idOfCamPlacement", idOfCamPlacement);
+    if(idOfCamPlacement === "+27"){
+      if (!page.url().includes("/search") ) await page.goBack(); 
+      }
+    }
 
-      return pages;
-
-}
-
-function getSumOfCount(filterarr, id){
-  let countforid = 0;
-   let filtSearch1_id= post.flat().filter(({placementId})=> placementId === id).map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
+  function getSumOfCount(filterarr, id, convertedArr){
+    let countforid = 0;
+    let filredCount_id= post.flat().filter(({placementId})=> placementId === id).map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
       ({count}));
-    for (let i = 0; i < filtSearch1_id.length; i++ ) {
-        countforid = countforid + filtSearch1_id[i]["count"];
+    for (let i = 0; i < filredCount_id.length; i++ ) {
+        countforid = countforid + filredCount_id[i]["count"];
           }
     console.log("countforid", countforid);
-    let convertedSearch1 = convertArrtoObj(filterarr, "placementId", "actionId");
-    convertedSearch1[id+"_1"]["count"] = countforid;
-    return convertedSearch1;
-}
+    convertedArr[id+"_1"]["count"] = countforid;
+    return convertedArr;
+    }
 
 
 describe("cam tracking", () => {
@@ -68,7 +66,6 @@ describe("cam tracking", () => {
   it("/search", async () => { 
     subscribeToPost();
     
-   // const page1 = await browser.newPage(); 
 
     await page.goto(autologinLink);
     await page.waitFor(6000);
@@ -77,110 +74,57 @@ describe("cam tracking", () => {
     let filteredPostArrSearch1 = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
       ({placementId, actionId, promo, promocode, count})).filter(({placementId})=> placementId !== 19 && placementId !==16);
 
-   
-// might be a separate function to get total count for an according placement
-   /* let filtSearch1_27 = post.flat().filter(({placementId})=> placementId === 27).map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
-      ({count}));
+    console.log("filteredPostArrSearch1", filteredPostArrSearch1);
+    console.log("filteredPostArrSearch1 element2", filteredPostArrSearch1[2]);
+    console.log("obj to arr of keys: ",  Object.keys(expectedValuesSearch1));
+    console.log("convertArrtoObj", convertArrtoObj(filteredPostArrSearch1, "placementId", "actionId"));
 
+    let convertedSearch1 = convertArrtoObj(filteredPostArrSearch1 , "placementId", "actionId");
+    convertedSearch1 = getSumOfCount(filteredPostArrSearch1, 27, convertedSearch1);
+    convertedSearch1 = getSumOfCount(filteredPostArrSearch1, 3, convertedSearch1);
+    console.log("convertedSearch1", convertedSearch1);
 
-    for (let i = 0; i < filtSearch1_27.length; i++ ) {
-        countfor27 = countfor27 + filtSearch1_27[i]["count"];
-          }
-    console.log("countfor27", countfor27); */
-
-
-    //let filteredPostArr = mappedPostArr.filter(({placementId})=> placementId !== 19 && placementId !==16);
-     //console.log("mappedPostArr", mappedPostArr);
-     console.log("filteredPostArrSearch1", filteredPostArrSearch1);
-     console.log("filteredPostArrSearch1 element2", filteredPostArrSearch1[2]);
-
-     console.log("obj to arr of keys: ",  Object.keys(expectedValuesSearch1));
-     console.log("convertArrtoObj", convertArrtoObj(filteredPostArrSearch1, "placementId", "actionId"));
-
-   //  let convertedSearch1 = convertArrtoObj(filteredPostArrSearch1, "placementId", "actionId");
-     
-//convertedSearch1["27_1"]["count"] = countfor27;
-   let convertedSearch1 = getSumOfCount(filteredPostArrSearch1, 27);
-   convertedSearch1 = getSumOfCount(filteredPostArrSearch1, 3);
-   console.log("convertedSearch1", convertedSearch1);
-   // console.log("convertedSearch1[27_1]count ", convertedSearch1["27_1"]["count"]);
-
-
-   // assert.deepEqual(convertArrtoObj(filteredPostArrSearch1, "placementId", "actionId"), expectedValuesSearch1, "Test on  /search impressions failed" );
-     assert.deepEqual(convertedSearch1, expectedValuesSearch1, "Test on  /search impressions failed" );
+    assert.deepEqual(convertedSearch1, expectedValuesSearch1, "Test on  /search impressions failed" );
 
        });
 
  it("clicks", async () => {
-   // selectorsOnSearch.forEach(element => clickOnCamPlacement(element)); 
-   let keyOfSelectors = Object.keys(selectorsOnSearch);
-   console.log ("keyOfSelectors", keyOfSelectors[1]);
-   console.log ("selectorsOnSearch", selectorsOnSearch[1]);
-
-//keyOfSelectors.forEach(element => await clickOnCamPlacement(selectorsOnSearch[element])); //ошибка при вызове асинхронной функции
-
-for (let keyOfSelector of keyOfSelectors) {
-  await clickOnCamPlacement(selectorsOnSearch[keyOfSelector]);
-  console.log ("keyOfSelector", selectorsOnSearch[keyOfSelector]);
-}
-/*
-await clickOnCamPlacement(selectorsOnSearch[3]);
-await clickOnCamPlacement(selectorsOnSearch[27]);
-await page.bringToFront();
-await clickOnCamPlacement(selectorsOnSearch[1]);
-await clickOnCamPlacement(selectorsOnSearch[18]);  */
-
-//await page.waitFor(3000);
+    let keyOfSelectors = Object.keys(selectorsOnSearch);
+    console.log ("keyOfSelectors", keyOfSelectors[1]);
+    console.log ("selectorsOnSearch", selectorsOnSearch[1]);
 
 
-  //clickOnCamPlacement(selectorsOnSearch[1]);
-/*
-    await page.waitFor(selectorsOnSearch[3]);
-    await page.click(selectorsOnSearch[3]);
-    await page.waitFor(3000); */
-   
-//console.log("key",  Object.keys(selectorsOnSearch));
-  
-    
-   // const pages = await browser.pages();
-   // await page.bringToFront();
-    //const url_1 = pages[2].url();
-
-
-     // console.log("URL_1", url_1 );
-
-/*
-
-      await page.waitFor(selectorsOnSearch[3]);
-      await page.click(selectorsOnSearch[3]);
-      await page.waitFor(3000);
-       //const url_3 = pages[2].url();
-       //console.log("URL_3", url_3 );
+    for (let keyOfSelector of keyOfSelectors) {
+      await clickOnCamPlacement(selectorsOnSearch[keyOfSelector], keyOfSelector);
       await page.bringToFront();
+      console.log ("keyOfSelector", selectorsOnSearch[keyOfSelector]);
+    }
 
-      await page.waitFor(selectorsOnSearch[27]);
-      await page.click(selectorsOnSearch[27]);
-      await page.waitFor(3000);
-       //const url_27 = pages[1].url();
-     // console.log("URL_27", url_27 );
+    const pages = await browser.pages();
 
-      if (!page.url().includes("/search") ) await page.goBack();
-      await page.waitFor(selectorsOnSearch[18]);
-      await page.click(selectorsOnSearch[18]);
-      await page.waitFor(3000);
-      //const url_18 = pages[1].url();
-     // console.log("URL_18", url_18 );
-      console.log("Test", selectorsOnSearch[3]);
+    for (let i = 2; i < pages.length; i++ ) {
+          console.log("target - ", pages[i].url());
+          url_transition.push(pages[i].url());
+    }
 
-*/
+    console.log("url_transition", url_transition);
 
+    for (url of url_transition){
+      if(url.includes("firecams")){
+            url_flag = true;
+
+      }
+    }
+
+     
+   console.log("url_flag", url_flag);
 
     let filteredPostArrSearch2 = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
     ({placementId, actionId, promo, promocode, count})).filter(({placementId, actionId})=> placementId !== 19 && placementId !==16 && actionId !== 1);
     console.log("filteredPostArrSearch2", filteredPostArrSearch2);
 
      assert.deepEqual(convertArrtoObj(filteredPostArrSearch2, "placementId", "actionId"), expectedValuesSearch2, "Test on  /search clicks failed" );
-
+     assert.equal(url_flag, true, "Transition on cam placements failed");
 
   })  
 
