@@ -8,6 +8,7 @@ const assert = require("chai").assert;
 const should = require("should");
 let post = [];
 let url_transition = [];
+//let actionId;
 const REQUEST_URL = "t.insigit.com/4a54e80cce5f98dab17e9e4b935f6825/725d96c4807507eb4bc7635e22a0c096";
 
 const {selectorsOnSearch} = require("../placement-selectors.js");
@@ -31,14 +32,22 @@ const {expectedValuesLivechat2} = require("../expect-placements-fixtures.js");
 const {expectedValuesUserMenu1} = require("../expect-placements-fixtures.js");
 const {expectedValuesUserMenu2} = require("../expect-placements-fixtures.js");
 
-
-
-//let url_flag_search = false;
-//const camDomain = "firecams";
+var _ = require('lodash');
+// Load the core build.
+var _ = require('lodash/core');
+// Load the FP build for immutable auto-curried iteratee-first data-last methods.
+  
+const camDomain = "firecams";
 //const camDomain = "ebonyflirtcams";
 //const camDomain = "visit-x";
-const camDomain = "camnaughtydate";
+//const camDomain = "camnaughtydate";
+//const camDomain = "imlive";
+//const camDomain = "getlivesex";
 
+
+const indexOfCamPage = 2;
+const notif_16 = 16;
+const notif_19 = 19;
 
 
 
@@ -99,9 +108,7 @@ function subscribeToPost(){
     console.log("countforid", countforid);
 
     if (convertedArr[id+"_1"]["promocode"].includes("_offline")){
-     //convertedArr[id+"_1"]["promocode"] = convertedArr[id+"_1"]["promocode"].substr(-8);
-          convertedArr[id+"_1"]["promocode"] = convertedArr[id+"_1"]["promocode"].replace("_offline", ""); //надо найти метод
-
+     convertedArr[id+"_1"]["promocode"] = convertedArr[id+"_1"]["promocode"].replace("_offline", ""); //надо найти метод
       console.log("replace offline", convertedArr[id+"_1"]["promocode"]);
     }
 
@@ -132,7 +139,59 @@ function subscribeToPost(){
      while (arr.length) {
         arr.pop();
       }
+      return arr;
 
+  }
+
+  function addUrlsToArr(pages){
+    
+     for (let i = indexOfCamPage; i < pages.length; i++ ) {
+          url_transition.push(pages[i].url());
+    }
+    return  url_transition;
+  }
+
+  function closePages(pages){
+     for (let i = indexOfCamPage; i < pages.length; i++ ) {
+          pages[i].close();
+    }
+  }
+
+
+  function getFilteredArr(argName, argValue){
+    if (argName !== undefined){
+      let filteredPostArr = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
+      ({placementId, actionId, promo, promocode, count})).filter(({placementId,actionId})=> placementId !== notif_16 && placementId !== notif_19 && argName !== argValue);
+      
+      console.log("filteredPostArr_in_func", filteredPostArr);
+
+       return filteredPostArr;
+    }
+     if (argName === undefined) {
+      let filteredPostArr = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
+      ({placementId, actionId, promo, promocode, count})).filter(({placementId, actionId})=> placementId !== notif_16 && placementId !== notif_19);
+       return filteredPostArr;
+    }
+      
+   // return filteredPostArr;
+
+  }
+
+
+    async function waitForEqualAsync(func, expected, message) {
+    const startTime = new Date().getTime();
+
+    while(new Date().getTime() <= startTime + 15000){
+      const value =   func();
+      if (_.isEqual(value, expected)){
+        return;
+      }
+       //await this.wait(500);
+       await page.waitFor(500)
+    }
+    const actual =   func();
+    throw new Error(`${message}
+    Actual: ${actual}, expected: ${expected}`);
   }
 
 
@@ -142,38 +201,45 @@ describe("cam tracking", () => {
   it("impressions on /search", async () => { 
     subscribeToPost();
     //await page.setGeolocation({latitude: 59.95, longitude: 30.31667});
-        await page.setGeolocation({latitude: 52.520008, longitude: 13.404954});
-
-
-
+    await page.setGeolocation({latitude: 52.520008, longitude: 13.404954});
     await page.goto(autologinLink);
-    //await page.setCookie("b66fde4a1bb308c20da92058390fd100", "172.98.77.97");
+   
     // await page.goto(autologinLink);
 
     await page.waitFor(6000);
-   
-    console.log("POST array:", post);
-    let filteredPostArrSearch1 = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
-      ({placementId, actionId, promo, promocode, count})).filter(({placementId})=> placementId !== 19 && placementId !==16);
 
-    console.log("filteredPostArrSearch1", filteredPostArrSearch1);
-    console.log("filteredPostArrSearch1 element2", filteredPostArrSearch1[2]);
-    console.log("obj to arr of keys: ",  Object.keys(expectedValuesSearch1));
-    console.log("convertArrtoObj", convertArrtoObj(filteredPostArrSearch1, "placementId", "actionId"));
-
+    const impOnSearch = () => {
+      console.log("POST array:", post);
+     // let filteredPostArrSearch1 = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
+     // ({placementId, actionId, promo, promocode, count})).filter(({placementId})=> placementId !== 19 && placementId !==16);
+        
+    let filteredPostArrSearch1 = getFilteredArr();
     let convertedSearch1 = convertArrtoObj(filteredPostArrSearch1 , "placementId", "actionId");
+
+
+    
+
     convertedSearch1 = getSumOfCount(filteredPostArrSearch1, 27, convertedSearch1);
     convertedSearch1 = getSumOfCount(filteredPostArrSearch1, 3, convertedSearch1);
     console.log("convertedSearch1", convertedSearch1);
+    return convertedSearch1;
+    }
 
-    assert.deepEqual(convertedSearch1, expectedValuesSearch1, "Test on  /search impressions failed" );
+
+
+   await waitForEqualAsync(impOnSearch, expectedValuesSearch1, "Test on  /search impressions failed");
+   
+    
+   // assert.deepEqual(convertedSearch1, expectedValuesSearch1, "Test on  /search impressions failed" );
 
        });
 
  it("clicks on /search", async () => {
+
+ 
     let keyOfSelectors = Object.keys(selectorsOnSearch);
     console.log ("keyOfSelectors", keyOfSelectors[1]);
-    console.log ("selectorsOnSearch", selectorsOnSearch[1]);
+    console.log ("selectorsOnSearch", selectorsOnSearch[1]) ;
    
     for (let keyOfSelector of keyOfSelectors) {
       await clickOnCamPlacement(selectorsOnSearch[keyOfSelector], keyOfSelector);
@@ -181,35 +247,54 @@ describe("cam tracking", () => {
       console.log ("keyOfSelector", selectorsOnSearch[keyOfSelector]);
     }
 
+    
     let pages = await browser.pages();
 
-    for (let i = 2; i < pages.length; i++ ) {
-          url_transition.push(pages[i].url());
-    }
+    url_transition = addUrlsToArr(pages);
+
 
     console.log("url_transition", url_transition);
+  
 
     let url_flag_search = checkTransitionUrl(url_transition);
-    console.log("url_flag_search", url_flag_search);
-    console.log("url_flag", url_flag_search);
+    
+     
+      const clicksOnSearch = () => {
 
-    let filteredPostArrSearch2 = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
-    ({placementId, actionId, promo, promocode, count})).filter(({placementId, actionId})=> placementId !== 19 && placementId !==16 && actionId !== 1);
-    console.log("filteredPostArrSearch2", filteredPostArrSearch2);
+      let filteredPostArrSearch2 = getFilteredArr(actionId, 1);
 
-     assert.deepEqual(convertArrtoObj(filteredPostArrSearch2, "placementId", "actionId"), expectedValuesSearch2, "Test on  /search clicks failed" );
+      
+      //let filteredPostArrSearch2 = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
+     // ({placementId, actionId, promo, promocode, count})).filter(({placementId, actionId})=> placementId !== 19 && placementId !==16 && actionId !== 1);
+      console.log("filteredPostArrSearch2", filteredPostArrSearch2);
+
+      let convertedSearch2 = convertArrtoObj(filteredPostArrSearch2 , "placementId", "actionId");
+       console.log("convertedSearch2", convertedSearch2);
+        return convertedSearch2;
+
+      }
+
+      closePages(pages);
+
+    
+    await waitForEqualAsync(clicksOnSearch, expectedValuesSearch2, "Test on  /search clicks failed");
+
+    //assert.deepEqual(convertArrtoObj(filteredPostArrSearch2, "placementId", "actionId"), expectedValuesSearch2, "Test on  /search clicks failed" );
      assert.equal(url_flag_search, true, "Transition on /search failed");
 
   });
 
+
   it("impressions on /tab:livecam", async () => {
         
-      clearArr(post);
+      post = clearArr(post);
 
       await page.goto(domain + "/search/tab:livecam");
       console.log("page.url()", page.url());
       await page.waitFor(5000);
       console.log("post", post);
+
+      function impOnLivecam(){
 
      let filteredPostArrlivecam1 = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
       ({placementId, actionId, promo, promocode, count})).filter(({placementId})=> placementId !== 19 && placementId !==16 && placementId !== 1);
@@ -218,31 +303,49 @@ describe("cam tracking", () => {
      let convertedLivecam1 = convertArrtoObj(filteredPostArrlivecam1 , "placementId", "actionId");
      convertedLivecam1 = getSumOfCount(filteredPostArrlivecam1, 4, convertedLivecam1);
       console.log("convertedLivecam1", convertedLivecam1);
+      return convertedLivecam1;
+      }
 
-      assert.deepEqual(convertedLivecam1, expectedValuesLivecam1, "Test on  /livecam impressions failed" );
+    await  waitForEqualAsync(impOnLivecam, expectedValuesLivecam1, "Test on  /livecam impressions failed" );
+
+
+      //assert.deepEqual(convertedLivecam1, expectedValuesLivecam1, "Test on  /livecam impressions failed" );
 
 
   });
-
+ 
   it("click on /tab:livecam", async () => {
          
     await clickOnCamPlacement(selectorsOnLivecam["+4"], "+4" );
     await page.bringToFront();
-    let pages = await browser.pages();
-    clearArr(url_transition);
+
+
+   
+
+     const clicksOnLivecam = () => {
+      let filteredPostArrlivecam2 = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
+      ({placementId, actionId, promo, promocode, count})).filter(({placementId, actionId})=> placementId !== 19 && placementId !==16 && actionId !== 1);
+      console.log("filteredPostArrlivecam2", filteredPostArrlivecam2);
+
+      let convertedlivecam2 = convertArrtoObj(filteredPostArrlivecam2 , "placementId", "actionId");
+      return convertedlivecam2;
+
+      }
+
+       let pages = await browser.pages();
+      url_transition = clearArr(url_transition);
  
-    console.log("pages_length4", pages.length);
-    console.log("pages 4", pages[4].url());
-    url_transition.push(pages[4].url());
+      url_transition = addUrlsToArr(pages);
+
       
     let url_flag_livecam = checkTransitionUrl(url_transition);
     console.log("url_flag_livecam", url_flag_livecam);
 
-    let filteredPostArrlivecam2 = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
-    ({placementId, actionId, promo, promocode, count})).filter(({placementId, actionId})=> placementId !== 19 && placementId !==16 && actionId !== 1);
-    console.log("filteredPostArrlivecam2", filteredPostArrlivecam2);
+      closePages(pages);
 
-    assert.deepEqual(convertArrtoObj(filteredPostArrlivecam2, "placementId", "actionId"), expectedValuesLivecam2, "Test on  /ivecam clicks failed" );
+    await waitForEqualAsync(clicksOnLivecam, expectedValuesLivecam2, "Test on  /ivecam clicks failed");
+
+    //assert.deepEqual(convertArrtoObj(filteredPostArrlivecam2, "placementId", "actionId"), expectedValuesLivecam2, "Test on  /ivecam clicks failed" );
     assert.equal(url_flag_livecam, true, "Transition on /livecam failed");
 
   });
@@ -252,7 +355,7 @@ describe("cam tracking", () => {
     
     await page.goto(domain + "/search");
     await page.waitFor(5000);
-    clearArr(post);
+    post = clearArr(post);
 
     await page.waitFor(3000);
 
@@ -262,82 +365,129 @@ describe("cam tracking", () => {
      let user_page = page.url();
      console.log("user_page", user_page);
 
-    let filteredPostArrUserId1 = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
+    const impOnUeserId = () => {
+      let filteredPostArrUserId1 = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
       ({placementId, actionId, promo, promocode, count})).filter(({placementId})=> placementId !== 19 && placementId !==16 && placementId !== 27);
-     console.log("filteredPostArrUserId1", filteredPostArrUserId1);
+      console.log("filteredPostArrUserId1", filteredPostArrUserId1);
 
-     let convertedUserId1 = convertArrtoObj(filteredPostArrUserId1 , "placementId", "actionId");
-     convertedUserId1 = getSumOfCount(filteredPostArrUserId1, 7, convertedUserId1);
-     console.log("convertedUserId1", convertedUserId1);
+      let convertedUserId1 = convertArrtoObj(filteredPostArrUserId1 , "placementId", "actionId");
+      convertedUserId1 = getSumOfCount(filteredPostArrUserId1, 7, convertedUserId1);
+      console.log("convertedUserId1", convertedUserId1);
+      return convertedUserId1;
      
+     }
 
-      assert.deepEqual(convertedUserId1, expectedValuesUserId1, "Test on  /userId impressions failed" );
+      await waitForEqualAsync(impOnUeserId, expectedValuesUserId1, "Test on /userId impressions failed");
+
+
+      //assert.deepEqual(convertedUserId1, expectedValuesUserId1, "Test on  /userId impressions failed" );
 
 
   });
 
   it("click on /userId", async () => {
     await page.bringToFront();
-     clearArr(post);
+     post = clearArr(post);
 
 
      await clickOnCamPlacement(selectorsOnUserId["+7"], "+7" );
+      await page.waitFor(3000);
+
      console.log("post7", post);
-     let pages = await browser.pages();
+    
 
-    while (url_transition.length) {
-      url_transition.pop();
-      }
-      console.log("pages_length7", pages.length);
-      url_transition.push(pages[5].url());
-      console.log("url_transition 7", url_transition );
+     url_transition = clearArr(url_transition);
 
-      let url_flag_userId = checkTransitionUrl(url_transition);
-      console.log("url_flag_userId", url_flag_userId);
+     
+      const clickOnUeserId = () => {
 
       let filteredPostArruserId2 = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
       ({placementId, actionId, promo, promocode, count})).filter(({placementId, actionId})=> placementId !== 19 && placementId !==16);
       console.log("filteredPostArruserId2", filteredPostArruserId2);
 
-      assert.deepEqual(convertArrtoObj(filteredPostArruserId2, "placementId", "actionId"), expectedValuesUserId2, "Test on  /userId clicks failed" );
+      let convertedUserId2 = convertArrtoObj(filteredPostArruserId2 , "placementId", "actionId");
+      return convertedUserId2;
+
+        }
+         let pages = await browser.pages();
+         console.log("pages.length", pages.length);
+        url_transition - addUrlsToArr(pages);
+
+        console.log("url_transition 7", url_transition );
+
+        let url_flag_userId = checkTransitionUrl(url_transition);
+        console.log("url_flag_userId", url_flag_userId);
+
+        closePages(pages);
+
+      await waitForEqualAsync(clickOnUeserId, expectedValuesUserId2, "Test on  /userId clicks failed");
+
+
+     // assert.deepEqual(convertArrtoObj(filteredPostArruserId2, "placementId", "actionId"), expectedValuesUserId2, "Test on  /userId clicks failed" );
       assert.equal(url_flag_userId, true, "Transition on /userId failed");
 
   });
 
   it("impression on /rooms", async () => {
     await page.bringToFront();
-      clearArr(post);
+      post = clearArr(post);
 
       await page.goto(domain + "/rooms");
       await page.waitFor(5000);
       console.log("post 23", post);
+
+       const impOnRooms = () => {
 
       let filteredPostArrRooms1 = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
       ({placementId, actionId, promo, promocode, count})).filter(({placementId})=> placementId !== 19 && placementId !==16 && placementId !== 1);
      console.log("filteredPostArrRooms1", filteredPostArrRooms1);
 
      let convertedRooms1 = convertArrtoObj(filteredPostArrRooms1 , "placementId", "actionId");
-     assert.deepEqual(convertedRooms1, expectedValuesRooms1, "Test on  /rooms impressions failed" );
+     return convertedRooms1;
+       }
+
+      await waitForEqualAsync(impOnRooms, expectedValuesRooms1, "Test on /rooms impressions failed");
+
+    // assert.deepEqual(convertedRooms1, expectedValuesRooms1, "Test on /rooms impressions failed" );
 
   });
-
   it("clicks on /rooms", async() => {
    
-      clearArr(post);
-      console.log("post23", post);
+      post = clearArr(post);
 
-    await clickOnCamPlacement(selectorsOnRooms["+23"], "+23" );
      
+
+      await clickOnCamPlacement(selectorsOnRooms["+23"], "+23" );
+      console.log("post23_2outside", post);
+      let pages = await browser.pages();
+
+
+      const clickOnRooms = () => {
+
+      console.log("post23_2inside", post);
      let filteredPostArrRooms2 = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
       ({placementId, actionId, promo, promocode, count})).filter(({placementId, actionId})=> placementId !== 19 && placementId !==16 && placementId !==15 );
       console.log("filteredPostArrRooms2", filteredPostArrRooms2);
-      
-      assert.deepEqual(convertArrtoObj(filteredPostArrRooms2, "placementId", "actionId"), expectedValuesRooms2, "Test on  /rooms clicks failed" );
+      let convertedRooms2 = convertArrtoObj(filteredPostArrRooms2 , "placementId", "actionId");
+      return convertedRooms2;
+
+      }     
+
+        closePages(pages);
+
+       await waitForEqualAsync(clickOnRooms, expectedValuesRooms2, "Test on /rooms clicks failed");
+
+
+
+     // assert.deepEqual(convertArrtoObj(filteredPostArrRooms2, "placementId", "actionId"), expectedValuesRooms2, "Test on  /rooms clicks failed" );
 
   });
 
 
+
   it("impressions on /livechat", async() => {
+
+     const impOnLivechat = () => {
 
     let filteredPostArrLivechat1 = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
       ({placementId, actionId, promo, promocode, count})).filter(({placementId})=> placementId !== 19 && placementId !==16 && placementId !== 23);
@@ -347,86 +497,130 @@ describe("cam tracking", () => {
      convertedLivechat1 = getSumOfCount(filteredPostArrLivechat1, 15, convertedLivechat1);
      console.log("convertedLivechat1", convertedLivechat1);
 
-     assert.deepEqual(convertedLivechat1, expectedValuesLivechat1, "Test on  /livechat impressions failed" );
+     return convertedLivechat1;
+
+
+      }
+      
+    await waitForEqualAsync(impOnLivechat, expectedValuesLivechat1, "Test on /livechat impressions failed");
+
+
+    // assert.deepEqual(convertedLivechat1, expectedValuesLivechat1, "Test on /livechat impressions failed" );
 
 
   });
-
   it("clicks on /livechat", async() => {
-      clearArr(post);
+      post = clearArr(post);
       console.log("post15_beforeckick", post);
 
       await clickOnCamPlacement(selectorsOnLivechat["+15"], "+15" );
       console.log("post15_afterckick", post);
 
       let pages = await browser.pages();
-      clearArr(url_transition);
+      url_transition = clearArr(url_transition);
  
       console.log("pages_length15", pages.length);
       for(let i= 0; i< pages.length; i++) {
         console.log("loop for urls", pages[i].url())
       }
-     console.log("current url", pages[6].url());
-      url_transition.push(pages[6].url());
+     
+      
+      url_transition = addUrlsToArr(pages);
+
 
       let url_flag_livechat = checkTransitionUrl(url_transition);
-    console.log("url_flag_livechat", url_flag_livechat);
+      console.log("url_flag_livechat", url_flag_livechat);
 
-    let filteredPostArrlivechat2 = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
-    ({placementId, actionId, promo, promocode, count})).filter(({placementId, actionId})=> placementId !== 19 && placementId !==16 && actionId !==1 );
-    console.log("filteredPostArrlivechat2", filteredPostArrlivechat2);
+      const clickOnLivechat = () => {
 
-    assert.deepEqual(convertArrtoObj(filteredPostArrlivechat2, "placementId", "actionId"), expectedValuesLivechat2, "Test on  /ivechat clicks failed" );
+      let filteredPostArrlivechat2 = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
+      ({placementId, actionId, promo, promocode, count})).filter(({placementId, actionId})=> placementId !== 19 && placementId !==16 && actionId !==1 );
+      console.log("filteredPostArrlivechat2", filteredPostArrlivechat2);
+
+     let convertedLivechat2 = convertArrtoObj(filteredPostArrlivechat2 , "placementId", "actionId");
+     return convertedLivechat2;
+
+    }
+     closePages(pages);
+
+    await waitForEqualAsync(clickOnLivechat, expectedValuesLivechat2, "Test on  /ivechat clicks failed");
+
+
+   // assert.deepEqual(convertArrtoObj(filteredPostArrlivechat2, "placementId", "actionId"), expectedValuesLivechat2, "Test on  /ivechat clicks failed" );
     assert.equal(url_flag_livechat, true, "Transition on /ivechat failed");
 
   });
 
+
   it("impression on /userMenu", async() => {
         await page.bringToFront();
 
-        clearArr(post);
+        post = clearArr(post);
 
         await clickOnCamPlacement(selectorsOnUserMenu["+2"], "+2" );
         console.log("post2", post);
 
 
+         const impOnUserMenu = () => {
+
         let filteredPostArruserMenu1 = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
         ({placementId, actionId, promo, promocode, count})).filter(({placementId, actionId})=> placementId !== 19 && placementId !==16 );
         console.log("filteredPostArruserMenu1", filteredPostArruserMenu1);
+        let converteduserMenu1 = convertArrtoObj(filteredPostArruserMenu1 , "placementId", "actionId");
+        return converteduserMenu1;
 
-        assert.deepEqual(convertArrtoObj(filteredPostArruserMenu1, "placementId", "actionId"), expectedValuesUserMenu1, "Test on  /userMenu impressions failed" );
+        }
+
+        await waitForEqualAsync(impOnUserMenu, expectedValuesUserMenu1, "Test on  /userMenu impressions failed");
+
+        //assert.deepEqual(convertArrtoObj(filteredPostArruserMenu1, "placementId", "actionId"), expectedValuesUserMenu1, "Test on  /userMenu impressions failed" );
 
         
   });
 
-
   it("clicks on /userMenu", async() => {
         await clickOnCamPlacement(selectorsOnUserMenu["+2_2"], "+2_2" );
 
-        let filteredPostArruserMenu2 = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
-        ({placementId, actionId, promo, promocode, count})).filter(({placementId, actionId})=> placementId !== 19 && placementId !==16 && actionId !==1 );
-        console.log("filteredPostArruserMenu2", filteredPostArruserMenu2);
-
+        
         let pages = await browser.pages();
-          clearArr(url_transition);
+          url_transition = clearArr(url_transition);
 
           console.log("pages_length2", pages.length);
 
-      for(let i= 0; i< pages.length; i++) {
+    /*  for(let i= 0; i< pages.length; i++) {
         console.log("loop for urls", pages[i].url())
       }
 
-            url_transition.push(pages[7].url());
+            url_transition.push(pages[7].url()); */
+            url_transition = addUrlsToArr(pages);
+
+            console.log("url_transition after", url_transition);
+
 
             let url_flag_userMenu = checkTransitionUrl(url_transition);
           console.log("url_flag_userMenu", url_flag_userMenu);
 
-          assert.deepEqual(convertArrtoObj(filteredPostArruserMenu2, "placementId", "actionId"), expectedValuesUserMenu2, "Test on  /userMenu clicks failed" );
+           const clickOnUserMenu = () => {
+            let filteredPostArruserMenu2 = post.flat().map(({placementId, anchorId, actionId, promo, promocode, uid, count}) => 
+           ({placementId, actionId, promo, promocode, count})).filter(({placementId, actionId})=> placementId !== 19 && placementId !==16 && actionId !==1 );
+            console.log("filteredPostArruserMenu2", filteredPostArruserMenu2);
+            let converteduserMenu2 = convertArrtoObj(filteredPostArruserMenu2 , "placementId", "actionId");
+            return converteduserMenu2;
+
+           }
+
+            closePages(pages);
+
+
+          await waitForEqualAsync(clickOnUserMenu, expectedValuesUserMenu2, "Test on  /userMenu clicks failed");
+
+         // assert.deepEqual(convertArrtoObj(filteredPostArruserMenu2, "placementId", "actionId"), expectedValuesUserMenu2, "Test on  /userMenu clicks failed" );
          assert.equal(url_flag_userMenu, true, "Transition on /userMenu failed");
 
 
 
-  })
+  }) 
+ 
 
 
    
